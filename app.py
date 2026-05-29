@@ -552,7 +552,10 @@ def infer_growth_stage(image: np.ndarray) -> Dict[str, Any]:
 
 def generate_recommendations(disease_result: Dict[str, Any], growth_result: Dict[str, Any], weather: Optional[Dict[str, Any]] = None) -> list[str]:
     recs: list[str] = []
-    dclass = disease_result["predicted_class"]
+    disease_result = disease_result or {}
+    growth_result = growth_result or {}
+    dclass = disease_result.get("predicted_class", "Unknown")
+    health_score = float(disease_result.get("health_score", 0.0) or 0.0)
 
     instr_map = {
         "Aphids": ["Inspect leaves closely for clusters of small pests.", "Use recommended insecticides if infestation is severe."],
@@ -566,10 +569,10 @@ def generate_recommendations(disease_result: Dict[str, Any], growth_result: Dict
     }
     recs.extend(instr_map.get(dclass, ["Practice general crop hygiene."]))
     
-    if disease_result["health_score"] < 50:
+    if health_score < 50:
         recs.append("Consult an agricultural expert urgently for low health score.")
         recs.append("Consult an agricultural expert if symptoms persist.")
-    elif disease_result["health_score"] < 70:
+    elif health_score < 70:
         recs.append("Increase frequency of crop monitoring based on moderate health.")
 
     if disease_result.get("is_uncertain"):
@@ -597,11 +600,15 @@ def generate_recommendations(disease_result: Dict[str, Any], growth_result: Dict
 
 def generate_farmer_insights(disease_result: Dict[str, Any], growth_result: Dict[str, Any]) -> list[str]:
     insights = []
-    dclass = disease_result["predicted_class"]
-    hscore = disease_result["health_score"]
+    disease_result = disease_result or {}
+    growth_result = growth_result or {}
+    dclass = disease_result.get("predicted_class", "Unknown")
+    hscore = float(disease_result.get("health_score", 0.0) or 0.0)
     gmain = growth_result.get("main_class", "Unknown")
 
-    if dclass != "Healthy":
+    if dclass == "Unknown":
+        insights.append("Model output is unavailable. Monitor the crop closely and re-run analysis with a clearer image.")
+    elif dclass != "Healthy":
         insights.append(f"Possible {dclass} risk detected. Immediate action advised.")
     elif hscore > 80:
         insights.append("Crop is currently healthy. No immediate disease risks detected.")
@@ -831,11 +838,7 @@ def build_comparison_result(old_results: Dict[str, Any], new_results: Dict[str, 
     if new_results.get("recommendations"):
         summary.append(f"Model priority: {new_results['recommendations'][0]}")
 
-    if isinstance(new_results.get("farmer_insights"), list):
-        insight_msg = f"Crop health improved by {abs_change:.1f}% this week." if change > 0 else (f"Crop health declined by {abs_change:.1f}% this week." if change < 0 else "Crop health remained stable this week.")
-        new_results["farmer_insights"].insert(0, insight_msg)
-
-    return {
+    result = {
         "old_score": old_score,
         "new_score": new_score,
         "change_percentage": change,
@@ -844,6 +847,12 @@ def build_comparison_result(old_results: Dict[str, Any], new_results: Dict[str, 
         "recommendation": recommendation,
         "summary": summary,
     }
+
+    if isinstance(new_results.get("farmer_insights"), list):
+        insight_msg = f"Crop health improved by {abs_change:.1f}% this week." if change > 0 else (f"Crop health declined by {abs_change:.1f}% this week." if change < 0 else "Crop health remained stable this week.")
+        result["farmer_insights"] = [insight_msg, *new_results["farmer_insights"]]
+
+    return result
 
 
 # -------------------------------------------------------------------

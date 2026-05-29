@@ -259,6 +259,49 @@ def test_build_comparison_result_improved():
     assert any("Disease spread reduced" in item for item in result["summary"])
 
 
+def test_build_comparison_result_does_not_mutate_input_insights():
+    old_results = {
+        "disease": {
+            "predicted_class": "Healthy",
+            "confidence": 0.8,
+            "health_score": 75.0,
+        },
+        "recommendations": ["Keep monitoring."],
+    }
+    new_results = {
+        "disease": {
+            "predicted_class": "Healthy",
+            "confidence": 0.9,
+            "health_score": 82.0,
+        },
+        "recommendations": ["Maintain routine care."],
+        "farmer_insights": ["Existing insight"],
+    }
+
+    original_insights = list(new_results["farmer_insights"])
+    result = app.build_comparison_result(old_results, new_results)
+
+    assert new_results["farmer_insights"] == original_insights
+    assert result["farmer_insights"][0] == "Crop health improved by 7.0% this week."
+    assert result["farmer_insights"][1:] == original_insights
+
+
+def test_generate_recommendations_handles_partial_results():
+    recs = app.generate_recommendations({}, None)
+
+    assert isinstance(recs, list)
+    assert recs
+    assert any("general crop hygiene" in rec.lower() for rec in recs)
+
+
+def test_generate_farmer_insights_handles_partial_results():
+    insights = app.generate_farmer_insights({}, {})
+
+    assert isinstance(insights, list)
+    assert insights
+    assert any("model output is unavailable" in insight.lower() for insight in insights)
+
+
 # Form upload submission routes
 def test_post_analyze_valid(client, valid_image):
     data = {"file": (valid_image, "test_cotton.png")}
