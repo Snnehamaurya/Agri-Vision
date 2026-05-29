@@ -302,6 +302,20 @@ def test_generate_farmer_insights_handles_partial_results():
     assert any("model output is unavailable" in insight.lower() for insight in insights)
 
 
+def test_generate_advanced_recommendations_handles_partial_results():
+    recs = app.generate_advanced_recommendations(
+        {"confidence": 0.5},
+        {"confidence": 0.7},
+    )
+
+    assert isinstance(recs, dict)
+    assert recs["irrigation_timing"]
+    assert recs["fertilizer_suggestions"]
+    assert recs["pest_prevention"]
+    assert recs["harvesting_window"]
+    assert "Unknown" not in recs["pest_prevention"]
+
+
 # Form upload submission routes
 def test_post_analyze_valid(client, valid_image):
     data = {"file": (valid_image, "test_cotton.png")}
