@@ -630,8 +630,11 @@ def generate_farmer_insights(disease_result: Dict[str, Any], growth_result: Dict
 
 
 def generate_advanced_recommendations(disease_result: Dict[str, Any], growth_result: Dict[str, Any]) -> Dict[str, str]:
+    disease_result = disease_result or {}
+    growth_result = growth_result or {}
+
     gmain = growth_result.get("main_class", "Unknown")
-    dclass = disease_result["predicted_class"]
+    dclass = disease_result.get("predicted_class", "Unknown")
 
     adv_recs = {
         "irrigation_timing": "Maintain standard schedule (every 7-10 days depending on soil moisture).",
